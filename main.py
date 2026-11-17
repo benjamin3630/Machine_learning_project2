@@ -69,7 +69,7 @@ def bias(x_test, x_train, y_train, rng, model=nn):
     sum_f = 0
     for i in range(np.shape(x_train)[0]):
         m = model(x_train[i],y_train[i], rng=rng)
-        sum_f += m.predict(x_test)
+        sum_f += m.predict_proba(x_test)[:,1] # predict proba gives [ [p1, p2]] where p1 is proba of having a class m.classes_[0] and p1 the proba of having a class m.classes[1]. Here m.classes_=[0,1] thus we use 1
     
     E_LS = sum_f / n_LS
     
@@ -87,7 +87,7 @@ def main():
 
     x_test = np.array([[0.6,0.5]])
 
-    test = bias(x_test, learning_samples= x1,Y_training = y1, model = nn, rng=rng)
+    test = bias(x_test, x_train=x1, y_train=y1, rng=rng, model=nn)
     print(test)
       
 
