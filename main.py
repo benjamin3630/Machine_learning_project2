@@ -2,11 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from sklearn.neural_network import MLPClassifier
-
 from sklearn.neighbors import KNeighborsClassifier 
-
-
 from sklearn.tree import DecisionTreeClassifier
+
 
 def P(x, beta=5):
     """Returns the probability that y=1
@@ -80,7 +78,7 @@ def get_random_seed(rng):
     #return int(rng.integers(0, 2**31 - 1))
     return 42 # todo remove this
 
-    
+
 def compute_error_params(x_test, x_train, y_train, rng, model=nn, model_param=None, beta=5):
     """
     Computes the residual error, the squared bias and the variance over the LS, for a given model.
@@ -110,9 +108,27 @@ def compute_error_params(x_test, x_train, y_train, rng, model=nn, model_param=No
     # residual error, aka var_y{y} = E_y{ (y-E_y{y})² }
     E_y = np.mean(y_train)
     residual_error = np.mean((h_B - E_y)**2)
-    print(f'residual error is {residual_error}')
+    # print(f'residual error is {residual_error}')
 
     return residual_error, bias_sqr, variance
+
+
+
+def compute_mean(rng, model, model_param, size_LS, beta, nb_LS=10):
+    # Creation de plusieurs data set (avec des beta = 5 et N = 250)
+
+    x_train, y_train = make_multiple_datasets(number_LS=nb_LS, size_LS=size_LS, beta=beta, rng=rng)
+    # this generates x_train with shape (number_LS, size_LS, 2) and y_train with shape (number_LS, size_LS)
+
+    # Génération d'une grille de données linéairement espacées
+    grid = np.mgrid[-1:1.01:0.01, -1:1.01:0.01] 
+    input_space = grid.T.reshape(-1, 2)
+
+    residual_error, bias_sqr, variance = compute_error_params(input_space, x_train, y_train, rng=rng, model=model, model_param=model_param, beta=beta)
+    expected_error = residual_error + bias_sqr + variance
+
+    return np.array( [np.mean(residual_error), np.mean(bias_sqr), np.mean(variance), np.mean(expected_error)])
+
 
 
 def plot_question_2_3(model, rng, nb_LS=10, size_LS=250, beta=5):
@@ -160,34 +176,21 @@ def plot_question_2_3(model, rng, nb_LS=10, size_LS=250, beta=5):
     plt.show()
 
 
-def compute_mean(rng, model, model_param, size_LS, beta, nb_LS=10):
-    # Creation de plusieurs data set (avec des beta = 5 et N = 250)
 
-    x_train, y_train = make_multiple_datasets(number_LS=nb_LS, size_LS=size_LS, beta=beta, rng=rng)
-    # this generates x_train with shape (number_LS, size_LS, 2) and y_train with shape (number_LS, size_LS)
-
-    # Génération d'une grille de données linéairement espacées
-    grid = np.mgrid[-1:1.01:0.01, -1:1.01:0.01] 
-    input_space = grid.T.reshape(-1, 2)
-
-    residual_error, bias_sqr, variance = compute_error_params(input_space, x_train, y_train, rng=rng, model=model, model_param=model_param, beta=beta)
-    expected_error = residual_error + bias_sqr + variance
-
-    return np.array( [np.mean(residual_error), np.mean(bias_sqr), np.mean(variance), np.mean(expected_error)])
     
 
 
 
-def plot_mean_over_complexity(rng):
+
+def plot_mean_over_complexity(rng, models, model_parameters):
     # rng = np.random.default_rng(seed=42) # todo remove seed
     
-    models = [nn, knn, dtree]
+    """models = [nn, knn, dtree]
     model_parameters = np.array([[1, 5, 20, 50, 100], # nn parameters (hidden layer size)
                                  [1, 3, 10, 30, 100], # knn parameters (number of neighbors)
                                  [1, 2, 4, 7, 12] # dtree parameters (depth)
-                                 ])
+                                 ])"""
 
-    # for nn model
     number_models = len(models)
     number_params = model_parameters.shape[1]
     number_outputs = 4 # compute_means returns 4 output : resid error, sqr bias, var and expected error
@@ -237,6 +240,89 @@ def plot_mean_over_complexity(rng):
     plt.show()
 
 
+def plot_mean_over_N(rng, models, sizes_LS):
+
+    number_models = len(models)
+    number_sizes = len(sizes_LS)
+    number_outputs = 4 # compute_means returns 4 output : resid error, sqr bias, var and expected error
+
+
+    result = np.zeros((number_models, number_sizes, number_outputs))
+    for i, model in enumerate(models):
+        for j, size in enumerate(sizes_LS):
+            result[i, j,:] = compute_mean(rng=rng, model=model, model_param=None, size_LS=size, beta=5)
+
+    #normalized_model_parameters = model_parameters / 
+    fig, axes = plt.subplots(1, 3, figsize=(18, 4))
+
+    # this plots each model on a graph and each line is a different result (var, bias, resid error)
+    # axes[0].plot(sizes_LS, result[0, :, 0], label="residual error nn")
+    axes[0].plot(sizes_LS, result[0, :, 1], label="squared bias nn")
+    axes[0].plot(sizes_LS, result[0, :, 2], label="variance nn")
+    axes[0].set_title("Neural Network")
+    axes[0].set_xlabel("Number of learning samples")
+
+    # axes[1].plot(sizes_LS, result[1, :, 0], label="residual error knn") # inverser le sens car knn est plus complexe quand le nbr de neighbors est faible
+    axes[1].plot(sizes_LS, result[1, :, 1], label="squared bias knn")
+    axes[1].plot(sizes_LS, result[1, :, 2], label="variance knn")
+    axes[1].set_title("K-Nearest Neighbors")
+    axes[1].set_xlabel("Number of learning samples")
+
+    # axes[2].plot(sizes_LS, result[2, :, 0], label="residual error dtree")
+    axes[2].plot(sizes_LS, result[2, :, 1], label="squared bias dtree")
+    axes[2].plot(sizes_LS, result[2, :, 2], label="variance dtree")
+    axes[2].set_title("Decision Tree")
+    axes[2].set_xlabel("Number of learning samples")
+
+    axes[0].legend()
+    axes[1].legend()
+    axes[2].legend()
+
+    plt.show()
+
+
+
+def plot_mean_over_beta(rng, models, betas):
+
+    number_models = len(models)
+    number_betas = len(betas)
+    number_outputs = 4 # compute_means returns 4 output : resid error, sqr bias, var and expected error
+
+
+    result = np.zeros((number_models, number_betas, number_outputs))
+    for i, model in enumerate(models):
+        for j, beta in enumerate(betas):
+            result[i, j,:] = compute_mean(rng=rng, model=model, model_param=None, size_LS=250, beta=beta)
+
+    #normalized_model_parameters = model_parameters / 
+    fig, axes = plt.subplots(1, 3, figsize=(18, 4))
+
+    # this plots each model on a graph and each line is a different result (var, bias, resid error)
+    axes[0].plot(betas, result[0, :, 0], label="residual error nn")
+    axes[0].plot(betas, result[0, :, 1], label="squared bias nn")
+    axes[0].plot(betas, result[0, :, 2], label="variance nn")
+    axes[0].set_title("Neural Network")
+    axes[0].set_xlabel("Beta")
+
+    axes[1].plot(betas, result[1, :, 0], label="residual error knn") # inverser le sens car knn est plus complexe quand le nbr de neighbors est faible
+    axes[1].plot(betas, result[1, :, 1], label="squared bias knn")
+    axes[1].plot(betas, result[1, :, 2], label="variance knn")
+    axes[1].set_title("K-Nearest Neighbors")
+    axes[1].set_xlabel("Beta")
+
+    axes[2].plot(betas, result[2, :, 0], label="residual error dtree")
+    axes[2].plot(betas, result[2, :, 1], label="squared bias dtree")
+    axes[2].plot(betas, result[2, :, 2], label="variance dtree")
+    axes[2].set_title("Decision Tree")
+    axes[2].set_xlabel("Beta")
+
+    axes[0].legend()
+    axes[1].legend()
+    axes[2].legend()
+
+    plt.show()
+
+
 
     
 
@@ -247,9 +333,24 @@ if __name__ == "__main__":
     # plot_question_2_3(model=dtree, rng=rng, nb_LS=10, size_LS=250, beta=5)
 
 
-    plot_mean_over_complexity(rng=rng)
+    models = [nn, knn, dtree]
+
+    # plot resid error, bias and variance over model complexity for each model
+    model_parameters = np.array([[1, 5, 20, 50, 100], # nn parameters (hidden layer size)
+                                    [1, 3, 10, 30, 100], # knn parameters (number of neighbors)
+                                    [1, 2, 4, 7, 12] # dtree parameters (depth)
+                                    ])
+    #plot_mean_over_complexity(rng=rng, models=models, model_parameters=model_parameters)
+
+
+
+    # plot resid error, bias and variance over number of learning samples for each model
+    sizes_LS = [100, 250, 500]
+    # plot_mean_over_N(rng=rng, models=models, sizes_LS=sizes_LS)
+
 
     betas = [1, 2, 5, 10, 20]
-    sizes_LS = [100, 250, 500]
+    plot_mean_over_beta(rng=rng, models=models, betas=betas)
+    
 
     
