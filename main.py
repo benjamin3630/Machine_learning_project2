@@ -20,8 +20,6 @@ def P(x, beta=5):
     return 1 / (1 + np.exp(-beta*(x2-np.sin(np.pi* x1))))
 
 
-
-
 def make_multiple_datasets(number_LS=10, size_LS=15, beta=5, rng=None):
     """
     Returns X_ls with shape (number_LS, size_LS, 2) and y_ls with shape (number_LS, size_LS)
@@ -42,25 +40,36 @@ def make_dataset(size_LS=250, beta=5, rng=None):
     return X[0], y[0]
 
 
-
-def nn(X_train, y_train, rng):
+def nn(X_train, y_train, rng, model_param=None):
     """Returns a trained neural network classifier"""
-    clf = MLPClassifier(solver = "lbfgs", alpha = 10**-5, max_iter = 2000, random_state=get_random_seed(rng))
+    if model_param is None:
+        hidden_layer_sizes = (100,) # default value is 100 neurons in a single hidden layer
+    else:
+        hidden_layer_sizes = model_param
+
+    clf = MLPClassifier(hidden_layer_sizes=hidden_layer_sizes, solver = "lbfgs", alpha = 10**-5, max_iter = 2000, random_state=get_random_seed(rng))
 
     return clf.fit(X_train, y_train)
 
 
-def knn(X_train, y_train, rng):
+def knn(X_train, y_train, rng, model_param=None):
     """Returns a trained k-nearest neighbors classifier"""
-    n_neighbors = 5
+    if model_param is None:
+            n_neighbors = 5 # default value is 5 neighbors
+    else:
+        n_neighbors = model_param
+    
     
     clf = KNeighborsClassifier(n_neighbors=n_neighbors)
     return clf.fit(X_train, y_train)
 
 
-def dtree(X_train, y_train, rng):
+def dtree(X_train, y_train, rng, model_param=None):
     """Returns a trained decision tree classifier"""
-    depth = 6
+    if model_param is None:
+        depth = 6   # default value is a depth of 6
+    else:
+        depth = model_param
     
     clf = DecisionTreeClassifier(max_depth=depth, random_state=get_random_seed(rng))
     return clf.fit(X_train, y_train)
@@ -69,10 +78,10 @@ def dtree(X_train, y_train, rng):
 def get_random_seed(rng):
     """Converts rng generator from numpy to a random number for the seed of sickit learn"""
     #return int(rng.integers(0, 2**31 - 1))
-    return 42
+    return 42 # todo remove this
 
     
-def compute_error_params(x_test, x_train, y_train, rng, model=nn, beta=5):
+def compute_error_params(x_test, x_train, y_train, rng, model=nn, model_param=None, beta=5):
     """
     Computes the residual error, the squared bias and the variance over the LS, for a given model.
     Input : 
@@ -85,9 +94,9 @@ def compute_error_params(x_test, x_train, y_train, rng, model=nn, beta=5):
     # variance and E_LS:
     n_LS = np.shape(y_train)[0]
     pred = np.zeros((y_train.shape[0], np.shape(x_test)[0])) # shape de x_test permet de fonctionner que x_test contiennent une data ou plusieurs
-
+    
     for i in range(np.shape(x_train)[0]):
-        m = model(x_train[i],y_train[i], rng=rng)
+        m = model(x_train[i],y_train[i], rng=rng, model_param=model_param)
         pred[i, :] = m.predict_proba(x_test)[:,1]
 
     E_LS = np.mean(pred, axis=0) # axis 0 pour que si on donne plusieurs x_test, E_LS garde la forme de x_test et moyenne juste les pred "element wise" pour chaque x_test
@@ -106,28 +115,8 @@ def compute_error_params(x_test, x_train, y_train, rng, model=nn, beta=5):
     return residual_error, bias_sqr, variance
 
 
-"""def compute_error(x_test, x_train, y_train, rng, model=nn, beta=5):
-    residual_error, bias_sqr, variance = compute_error_params(x_test, x_train, y_train, rng=rng, model=model, beta=beta)
-    expected_error = residual_error + bias_sqr + variance
-    return expected_error
-
-def compute_residual_error(x_test, x_train, y_train, rng, model=nn, beta=5):
-    residual_error, bias_sqr, variance = compute_error_params(x_test, x_train, y_train, rng=rng, model=model, beta=beta)
-    return residual_error
-
-
-def compute_bias_sqr(x_test, x_train, y_train, rng, model=nn, beta=5):
-    residual_error, bias_sqr, variance = compute_error_params(x_test, x_train, y_train, rng=rng, model=model, beta=beta)
-    return bias_sqr
-
-def compute_var_LS(x_test, x_train, y_train, rng, model=nn, beta=5):
-    residual_error, bias_sqr, variance = compute_error_params(x_test, x_train, y_train, rng=rng, model=model, beta=beta)
-    return variance"""
-    
-
-def plot_question_2_3(model=nn, nb_LS=10, size_LS=250, beta=5):
+def plot_question_2_3(model, rng, nb_LS=10, size_LS=250, beta=5):
     # Creation de plusieurs data set (avec des beta = 5 et N = 250)
-    rng = np.random.default_rng(seed=42)
 
     x_train, y_train = make_multiple_datasets(number_LS=nb_LS, size_LS=size_LS, beta=beta, rng=rng)
     # this generates x_train with shape (number_LS, size_LS, 2) and y_train with shape (number_LS, size_LS)
@@ -142,7 +131,7 @@ def plot_question_2_3(model=nn, nb_LS=10, size_LS=250, beta=5):
     input_space = grid.T.reshape(-1, 2)
     # input space est de shape (N², 2) avec N le nombre de points par axe
 
-    residual_error, bias_sqr, variance = compute_error_params(input_space, x_train, y_train, rng=rng, model=model, beta=beta)
+    residual_error, bias_sqr, variance = compute_error_params(input_space, x_train, y_train, rng=rng, model=model, model_param=None, beta=beta) # use model_param=None to keep default parameter value
     expected_error = residual_error + bias_sqr + variance
 
     # plot everything
@@ -171,10 +160,96 @@ def plot_question_2_3(model=nn, nb_LS=10, size_LS=250, beta=5):
     plt.show()
 
 
-def main():
-    plot_question_2_3(model=nn, nb_LS=10, size_LS=250, beta=5)
+def compute_mean(rng, model, model_param, size_LS, beta, nb_LS=10):
+    # Creation de plusieurs data set (avec des beta = 5 et N = 250)
+
+    x_train, y_train = make_multiple_datasets(number_LS=nb_LS, size_LS=size_LS, beta=beta, rng=rng)
+    # this generates x_train with shape (number_LS, size_LS, 2) and y_train with shape (number_LS, size_LS)
+
+    # Génération d'une grille de données linéairement espacées
+    grid = np.mgrid[-1:1.01:0.01, -1:1.01:0.01] 
+    input_space = grid.T.reshape(-1, 2)
+
+    residual_error, bias_sqr, variance = compute_error_params(input_space, x_train, y_train, rng=rng, model=model, model_param=model_param, beta=beta)
+    expected_error = residual_error + bias_sqr + variance
+
+    return np.array( [np.mean(residual_error), np.mean(bias_sqr), np.mean(variance), np.mean(expected_error)])
     
 
 
+
+def plot_mean_over_complexity(rng):
+    # rng = np.random.default_rng(seed=42) # todo remove seed
+    
+    models = [nn, knn, dtree]
+    model_parameters = np.array([[1, 5, 20, 50, 100], # nn parameters (hidden layer size)
+                                 [1, 3, 10, 30, 100], # knn parameters (number of neighbors)
+                                 [1, 2, 4, 7, 12] # dtree parameters (depth)
+                                 ])
+
+    # for nn model
+    number_models = len(models)
+    number_params = model_parameters.shape[1]
+    number_outputs = 4 # compute_means returns 4 output : resid error, sqr bias, var and expected error
+
+    print(np.max(model_parameters, axis=1))
+    print(model_parameters)
+
+    max_param = np.max(model_parameters, axis=1)
+    normalized_model_parameters = np.zeros_like(model_parameters, dtype=float)
+    for i in range(number_models):
+        normalized_model_parameters[i, :] = model_parameters[i, :]/max_param[i]
+    print(normalized_model_parameters)
+
+
+    
+    result = np.zeros((number_models, number_params, number_outputs))
+    for i, (model, params) in enumerate(zip(models, model_parameters)):
+        for j, param in enumerate(params):
+            result[i, j,:] = compute_mean(rng=rng, model=model, model_param=param, size_LS=250, beta=5)
+
+    #normalized_model_parameters = model_parameters / 
+    fig, axes = plt.subplots(1, 3, figsize=(18, 4))
+
+    # this plots each model on a graph and each line is a different result (var, bias, resid error)
+    axes[0].plot(normalized_model_parameters[0], result[0, :, 0], label="residual error nn")
+    axes[0].plot(normalized_model_parameters[0], result[0, :, 1], label="squared bias nn")
+    axes[0].plot(normalized_model_parameters[0], result[0, :, 2], label="variance nn")
+    axes[0].set_title("Neural Network")
+    axes[0].set_xlabel("Model complexity")
+
+    axes[1].plot(1-normalized_model_parameters[1], result[1, :, 0], label="residual error knn") # inverser le sens car knn est plus complexe quand le nbr de neighbors est faible
+    axes[1].plot(1-normalized_model_parameters[1], result[1, :, 1], label="squared bias knn")
+    axes[1].plot(1-normalized_model_parameters[1], result[1, :, 2], label="variance knn")
+    axes[1].set_title("K-Nearest Neighbors")
+    axes[1].set_xlabel("Model complexity")
+
+    axes[2].plot(normalized_model_parameters[2], result[2, :, 0], label="residual error dtree")
+    axes[2].plot(normalized_model_parameters[2], result[2, :, 1], label="squared bias dtree")
+    axes[2].plot(normalized_model_parameters[2], result[2, :, 2], label="variance dtree")
+    axes[2].set_title("Decision Tree")
+    axes[2].set_xlabel("Model complexity")
+
+    axes[0].legend()
+    axes[1].legend()
+    axes[2].legend()
+
+    plt.show()
+
+
+
+    
+
 if __name__ == "__main__":
-    main()
+    rng = np.random.default_rng()
+    # plot_question_2_3(model=nn, rng=rng, nb_LS=10, size_LS=250, beta=5)
+    # plot_question_2_3(model=knn, rng=rng, nb_LS=10, size_LS=250, beta=5)
+    # plot_question_2_3(model=dtree, rng=rng, nb_LS=10, size_LS=250, beta=5)
+
+
+    plot_mean_over_complexity(rng=rng)
+
+    betas = [1, 2, 5, 10, 20]
+    sizes_LS = [100, 250, 500]
+
+    
