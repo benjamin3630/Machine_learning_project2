@@ -26,7 +26,7 @@ def make_multiple_datasets(number_LS=10, size_LS=15, beta=5, rng=None):
         rng = np.random.default_rng()
     X_ls = rng.uniform(-1, 1, (number_LS, size_LS, 2))
     probs = P(X_ls, beta) # Marche directement si P utilise des fonctions NumPy
-    y_ls = rng.binomial(1, probs)
+    y_ls = rng.binomial(1, probs) 
     return X_ls, y_ls
 
 
@@ -131,6 +131,8 @@ def compute_mean(rng, model, model_param, size_LS, beta, nb_LS=10):
 
 
 
+
+     
 def plot_question_2_3(model, rng, nb_LS=10, size_LS=250, beta=5):
     # Creation de plusieurs data set (avec des beta = 5 et N = 250)
 
@@ -323,7 +325,87 @@ def plot_mean_over_beta(rng, models, betas):
     plt.show()
 
 
+#Q2.5
+def plot_question_2_5_beta(rng, nb_LS = 10):
+    
+     #Evolution of the optimal hyper paramter for a fixed N
+     
+     N = 1000
+     table_beta = [2,4,5,6,8,9,15,20] 
+     table_number_n = [1, 9, 45, 225,901]
+     
+     mean_error_evolution = np.zeros( (len(table_beta), len(table_number_n)) )
+     
+     for i , beta in enumerate(table_beta):
+         for j, param in enumerate(table_number_n):
+             mean_expected_error = compute_mean(rng, model = knn, model_param = param, size_LS = N, beta= beta)[3]
+             mean_error_evolution[i, j] = mean_expected_error     
+     
+     #Le meilleur hyper param est celui minimise l'erreur 
+     best_param_index = np.argmin(mean_error_evolution, axis=1)#Donne un tableau du meilleur hyper paramettre pour un beta donné
+     
+     best_param = np.zeros_like(best_param_index)
+     for i, bp in enumerate(best_param_index):
+         best_param[i] = table_number_n[bp]
+     
+     plt.scatter(table_beta, best_param)
+     plt.yscale('log')
+     plt.xscale('linear')
+     plt.xlabel(r'parameter $\beta$')
+     plt.ylabel("number of neighbors")
+     plt.show()
+     
+     best_param_for_beta = np.zeros((2, len(best_param)))
+     best_param_for_beta[0,:] = table_beta
+     best_param_for_beta[1,:] = best_param
+     print(best_param_for_beta)
+     
+def plot_question_2_5_N(rng, nb_LS = 10):
+    
+     #Evolution of the optimal hyper paramter for a fixed beta
+     
+     beta = 6
+     table_N = [50,200,500,1000,5000,10000]
+     
+     table_number_n = [1, 9, 45, 225,901]
+     
+     mean_error_evolution = np.zeros( (len(table_N), len(table_number_n)) )
+     
+     for i, N in enumerate(table_N):
+         for j, param in enumerate(table_number_n):
+             if(param <= N):
+                 mean_expected_error = compute_mean(rng, model = knn, model_param = param, size_LS = N, beta= beta)[3]
+                 mean_error_evolution[i, j] = mean_expected_error     
+             else:
+                 mean_error_evolution[i,j] = np.inf #Si le nombre de voisins > au nombre de data on met l'erreur à l'infini pour pas la compter
+                 
+     #Le meilleur hyper param est celui minimise l'erreur 
+     best_param_index = np.argmin(mean_error_evolution, axis=1)#Donne un tableau du meilleur hyper paramettre pour un beta donné
+     
+     best_param = np.zeros_like(best_param_index)
+     for i, bp in enumerate(best_param_index):
+         best_param[i] = table_number_n[bp]
+     
+     plt.scatter(table_N, best_param)
+     plt.loglog()
+     plt.xlabel("Sample size (N)")
+     plt.ylabel("number of neighbors")
+     plt.show()
+     
+     best_param_for_N = np.zeros((2, len(table_N)))
+     best_param_for_N[0,:] = table_N
+     best_param_for_N[1,:] = best_param
+     print(best_param_for_N)
+     #Evolution of the optimal hyper paramter for a fixed beta
 
+
+from sklearn.ensemble import BaggingClassifier
+
+def question_2_6( X_train, y_train, X, rng, nb_LS = 10, estimator = nn):
+   
+    
+    Bagging = BaggingClassifier(estimator = estimator(), max_samples = 1000, max_features= 2, n_estimators = 10).fit(X_train, y_train)
+    Bagging.predict_proba(X)
     
 
 if __name__ == "__main__":
@@ -333,7 +415,7 @@ if __name__ == "__main__":
     # plot_question_2_3(model=dtree, rng=rng, nb_LS=10, size_LS=250, beta=5)
 
 
-    models = [nn, knn, dtree]
+    """models = [nn, knn, dtree]
 
     # plot resid error, bias and variance over model complexity for each model
     model_parameters = np.array([[1, 5, 20, 50, 100], # nn parameters (hidden layer size)
@@ -350,7 +432,8 @@ if __name__ == "__main__":
 
 
     betas = [1, 2, 5, 10, 20]
-    plot_mean_over_beta(rng=rng, models=models, betas=betas)
+    plot_mean_over_beta(rng=rng, models=models, betas=betas)"""
     
-
+    plot_question_2_5_beta(rng=rng, nb_LS=10)
+    plot_question_2_5_N(rng=rng, nb_LS =10)
     
